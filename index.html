@@ -15,24 +15,20 @@
 				overflow: hidden;
 			}
 			a{ color: white; text-shadow: 0 1px 0 rgba( 0,0,0,.5 ) }
-			#container canvas{ position: absolute; left: 0; top: 0; width: 100%; height: 100%; bottom: 0;}
-			#title{ position: absolute; left: 10px; top: 10px; right: 0; text-shadow: 0 1px 0 rgba( 0,0,0,.6); color: white;}
-			canvas:nth-child(1) { margin-left: 256px;}
 		</style>
-		<link href='https://fonts.googleapis.com/css?family=Shadows+Into+Light' rel='stylesheet' type='text/css'>
+		<!--<link href='https://fonts.googleapis.com/css?family=Shadows+Into+Light' rel='stylesheet' type='text/css'>
 		<link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
 		<link href='https://fonts.googleapis.com/css?family=Bangers' rel='stylesheet' type='text/css'>
 		<link href='https://fonts.googleapis.com/css?family=Tulpen+One' rel='stylesheet' type='text/css'>
+		<link href='https://fonts.googleapis.com/css?family=Roboto+Condensed' rel='stylesheet' type='text/css'>
+		<link href='https://fonts.googleapis.com/css?family=Roboto+Mono' rel='stylesheet' type='text/css'>-->
 		<script src="js/three.min.js" ></script>
-		<script src="js/VREffect.js" ></script>
-		<script src="js/VRControls.js" ></script>
 		<script src="js/OrbitControls.js" ></script>
-		<!--<script src="js/webvr-polyfill.js" ></script>
-		<script src="js/webvr-manager.js" ></script>-->
+		<script src="js/THREE.Text.js" ></script>
 </head>
 	<body>
 
-<script id="vertex-shader" type="x-shader/x-vertex" >
+<script id="text-vertex-shader" type="x-shader/x-vertex" >
 #define MAX 32
 
 precision highp float;
@@ -92,7 +88,7 @@ void main() {
 
 </script>
 
-<script id="fragment-shader" type="x-shader/x-fragment" >
+<script id="text-fragment-shader" type="x-shader/x-fragment" >
 
 precision highp float;
 
@@ -105,361 +101,125 @@ void main() {
 	vec4 c = texture2D( map, vUV ).rgba;
 
 	gl_FragColor = vec4( c.rgb * vec3( 1., 1., 1. ), c.a );
+	//gl_FragColor = vec4( 1., 0., 1., 1. );
 
 }
 </script>
 
 <script>
 
-// @license http://opensource.org/licenses/MIT
-// copyright Paul Irish 2015
+'use strict'
 
+console.log( 'in' )
 
-// Date.now() is supported everywhere except IE8. For IE8 we use the Date.now polyfill
-//   github.com/Financial-Times/polyfill-service/blob/master/polyfills/Date.now/polyfill.js
-// as Safari 6 doesn't have support for NavigationTiming, we use a Date.now() timestamp for relative values
+var renderer, effect, scene, camera, controls;
 
-// if you want values similar to what you'd get with real perf.now, place this towards the head of the page
-// but in reality, you're just getting the delta between now() calls, so it's not terribly important where it's placed
-
-
-(function(){
-
-  if ("performance" in window == false) {
-      window.performance = {};
-  }
-  
-  Date.now = (Date.now || function () {  // thanks IE8
-	  return new Date().getTime();
-  });
-
-  if ("now" in window.performance == false){
-    
-    var nowOffset = Date.now();
-    
-    if (performance.timing && performance.timing.navigationStart){
-      nowOffset = performance.timing.navigationStart
-    }
-
-    window.performance.now = function now(){
-      return Date.now() - nowOffset;
-    }
-  }
-
-})();
-
-function TextRenderer( onReady ) {
-
-	var canvas = document.createElement( 'canvas' ),
-		ctx = canvas.getContext( '2d' );
-	var w = canvas.width,
-		h = canvas.height;
-
-	var string = ' abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890,.-;:_!"·$%&/()=?¿<>'
-	var texture = null;
-
-	var fontName = '"Shadows Into Light"';
-	//fontName = 'Bangers'
-	//fontName = 'Tulpen One'
-	//fontName = 'Roboto Condensed'
-	var size = 90;
-
-	function measureGlyphs() {
-
-		var w = 0;
-		ctx.font = size + 'px ' + fontName;
-		var y = size;
-		for( var j in string ) {
-			var res = ctx.measureText( string[ j ] );
-			if( res.width > w ) w = res.width;
-		}
-
-		var h = Math.ceil( 1.5 * size );
-
-		canvas.width = w;
-		canvas.height = string.length * h;
-
-		ctx.font = size + 'px ' + fontName;
-		ctx.fillStyle = '#ffffff'
-
-		var s = '';
-		var y = size;
-		for( var j in string ) {
-			ctx.fillText( string[ j ], 0, y );
-			y += h
-		}
-
-		var imageData = ctx.getImageData( 0, 0, canvas.width, canvas.height );
-		var d = imageData.data;
-
-		var ptr = 0;
-		var left = {};
-		var right = {};
-		var min = 1000, max = 0;
-		for( var y = 0; y < canvas.height; y++ ) {
-			for( var x = 0; x < canvas.width; x++ ) {
-				var a = d[ ptr ];
-				if( a > 0 ){
-					if( x < min ) min = x;
-					if( x > max ) max = x;
-				}
-				ptr += 4;
-			}
-			if( y > 0 && ( y % h === 0 ) ) {
-				var p = Math.floor( y / h ) - 1;
-				left[ p ] = min - 2;
-				right[ p ] = max + 2;
-				min = 1000, max = 0;
-			}
-		}
-
-		var dimensions = []
-		for( var j in string ) {
-			var minP = left[ j ];
-			var maxP = right[ j ];
-			dimensions[ j ] = maxP-minP;
-		}
-
-		dimensions[ 0 ] = .25  * size;
-
-		var fCanvas = document.createElement( 'canvas' );
-		var side = Math.ceil( Math.sqrt( string.length ) );
-		fCanvas.width = 1024
-		fCanvas.height = 2048
-		var cw = fCanvas.width / side;
-		var ch = fCanvas.height / side;
-		console.log( ch )
-		var fCtx = fCanvas.getContext( '2d' );
-
-		//document.body.appendChild( fCanvas );
-		fCanvas.style.position = 'absolute'
-		fCanvas.style.border = '1px solid red'
-
-		var x = 0;
-		var y = 0;
-		fCtx.strokeStyle = '#000000'
-		fCtx.font = size + 'px ' + fontName;
-		fCtx.fillStyle = '#ffffff'
-		fCtx.lineWidth = 2;
-		for( var j in string ) {
-			fCtx.fillText( string[ j ], x * cw, ( y + .75 ) * ch );
-			fCtx.strokeText( string[ j ], x * cw, ( y + .75 ) * ch );
-			/*fCtx.beginPath();
-			fCtx.rect( x * cw, y * ch, cw, ch );
-			fCtx.stroke()*/
-			x++;
-			if( x >= side ) {
-				y++;
-				x =0;
-			}
-		}
-
-		texture = new THREE.Texture( fCanvas );
-		texture.needsUpdate = true;
-
-		window.leftPosition = left;
-		window.string = string;
-		window.texture = texture;
-		window.dimensions = dimensions;
-		window.size = ch;
-
-	}
-
-	var testStr = 'lorem ipsum dolor sit amet';
-
-	ctx.font = size + 'px ' + fontName;
-	var res = ctx.measureText( testStr );
-	var defaultWidth = res.width;
-
-	var div = document.createElement( 'div' );
-	div.textContent = testStr;
-	div.style.fontFamily = fontName;
-	document.body.appendChild( div );
-	document.body.removeChild( div );
-
-	function waitForFont() {
-
-		ctx.font = size + 'px ' + fontName;
-		var res = ctx.measureText( testStr );
-		if( res.width != defaultWidth ) {
-			measureGlyphs();
-			onReady();
-		} else {
-			setTimeout( waitForFont, 50 );
-		}
-
-	}
-
-	waitForFont();
-
-}
-
-var textRenderer = new TextRenderer( init );
-
-function init() {
-
-var renderer = new THREE.WebGLRenderer( { antialias: true });
+renderer = new THREE.WebGLRenderer( { antialias: true });
 renderer.setSize( window.innerWidth, window.innerHeight );
 renderer.setPixelRatio( window.devicePixelRatio );
 document.body.appendChild( renderer.domElement );
 
-renderer.setClearColor( 0, 1 );
+var atlasRobotoCondensed = new THREE.FontAtlas( { 
+	renderer: renderer, 
+	fontName: 'Shadows Into Light', 
+	src: 'https://fonts.googleapis.com/css?family=Shadows+Into+Light'  
+}, check );
 
-var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, .1, 100 );
-camera.position.z = 2;
-camera.target = new THREE.Vector3();
+var atlasRobotoSlab = new THREE.FontAtlas( { 
+	renderer: renderer, 
+	fontName: 'Permanent Marker',
+	size: 140,
+	src: 'https://fonts.googleapis.com/css?family=Permanent+Marker' 
+}, check );
 
-var scene = new THREE.Scene();
+function createLabels() {
 
-var controls = new THREE.OrbitControls(camera);
+	var g = new THREE.IcosahedronGeometry( .1, 3 );
+	var m = new THREE.MeshNormalMaterial();
+	r = 2;
+	//var mesh = new THREE.Mesh( g, m );
+	var p = new THREE.Vector3();
+	for( var j = 0; j < 1000; j++ ) {
+	//	var mesh = new THREE.Mesh( g, m );
+		var r = 2 + Math.random() * 5;
+		var x = .5 - Math.random()
+		var y = .5 - Math.random()
+		var z = .5 - Math.random()
+		var theta = Math.atan2( Math.sqrt( x * x + y * y ), z )
+		var phi = Math.atan2( y, x )
+		p.set( r * Math.sin( theta ) * Math.cos( phi ), r * Math.sin( theta ) * Math.sin( phi ), r * Math.cos( theta ) )
+		//scene.add( mesh )
 
-var geometry = new THREE.BufferGeometry();
-var maxLength = 32;
-var positions = [];
-var ids = [];
-var indices = [];
-var h = 1;
-for( var x = 0; x <= maxLength; x++ ){
-	
-	[ 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0 ].forEach( function( v ) { positions.push( v ) } );
-	[ x, x, x, x ].forEach( function( v ) { ids.push( v ) } ) ;
-
-}
-
-for( var x = 0; x < maxLength; x++ ){
-	
-	[ 0, 1, 2, 1, 2, 3 ].forEach( function( v ) { indices.push( 4 * x + v ) } );
-
-}
-
-geometry.setIndex( new THREE.BufferAttribute( new Uint16Array( indices ), 1 ) );
-geometry.addAttribute( 'position', new THREE.BufferAttribute( new Float32Array( positions ), 3 ) );
-geometry.addAttribute( 'id', new THREE.BufferAttribute( new Float32Array( ids ), 1 ) );
-
-var chars = [];
-var widths = [];
-var lefts = [];
-
-function convertString( str ) {
-	var res = [];
-	str += '';
-	for( var j in str ) {
-		res.push( window.string.indexOf( str[ j ] ) );
+		var label = new THREE.Text( atlasRobotoCondensed );
+		label.mesh.position.copy( p );
+		var n = Math.random() * 300;
+		if( Math.random() > .5 ) n = Math.round( n ); else n = n.toFixed( Math.random() * 4 );
+		label.set( n );
+		label.mesh.position.x -= .001 * .5 * label.width;
+		label.mesh.lookAt( scene.position )
+		scene.add( label.mesh );
 	}
-	for( var j = res.length; j < maxLength; j++ ){
-		res.push( ' ' );
+
+}
+
+function check() {
+	if( atlasRobotoCondensed.ready && atlasRobotoSlab.ready ) init();
+}
+
+function init() {
+
+	scene = new THREE.Scene();
+
+	createLabels();
+
+	renderer.setClearColor( 0, 1 );
+
+	camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, .1, 100 );
+	camera.position.z = 2;
+	camera.target = new THREE.Vector3();
+
+	controls = new THREE.OrbitControls( camera );
+
+	var text = new THREE.Text( atlasRobotoCondensed );
+	text.mesh.position.y += .15;
+	scene.add( text.mesh );
+	var text2 = new THREE.Text( atlasRobotoSlab );
+	text2.mesh.position.y += .025;
+	scene.add( text2.mesh );
+
+	var cube = new THREE.Mesh( new THREE.BoxGeometry( .1, .1, .1 ), new THREE.MeshNormalMaterial() )
+	scene.add( cube );
+
+	function render( timestamp ) {
+
+		requestAnimationFrame( render );
+
+		scene.rotation.y = .001 * timestamp;
+		scene.rotation.z = .0001 * timestamp;
+
+		controls.update();
+		text.set( 'Performance.now():' );
+		text2.set( performance.now().toFixed( 2 ) );
+
+		text.mesh.position.x = .001 * ( - .5 * text.width );
+		text2.mesh.position.x = .001 * ( - .5 * text2.width );
+
+		renderer.render( scene, camera );
+
 	}
-	return res;
-}
 
-function getWidths( chars ) {
-	var res = []
-	chars.forEach( function( c ) {
-		res.push( dimensions[ c ] )
-	})
-	return res;
-}
+	function onWindowResize() {
 
-function getLefts( chars ) {
-	var res = []
-	chars.forEach( function( c ) {
-		res.push( leftPosition[ c ] )
-	})
-	return res;
-}
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		
+	}
 
-var material = new THREE.RawShaderMaterial( {
-	uniforms: {
-		string: { type: 'iv1', value: [] },
-		widths: { type: 'fv1', value: [] },
-		lefts: { type: 'fv1', value: [] },
-		map: { type: 't', value: texture },
-		dimensions: { type: 'v3', value: new THREE.Vector3( texture.image.width, texture.image.height, window.size ) }
-	},
-	vertexShader: document.getElementById( 'vertex-shader' ).textContent,
-	fragmentShader: document.getElementById( 'fragment-shader' ).textContent,
-	side: THREE.DoubleSide,
-	wireframe: false,
-	transparent: true
-} );
+	window.addEventListener( 'resize', onWindowResize );
 
-setText( 'hello world' );
-
-var mesh = new THREE.Mesh( geometry, material );
-mesh.position.set( -.5, .5, .5 )
-scene.add( mesh );
-
-var cube = new THREE.Mesh( new THREE.BoxGeometry( 1,1,1 ), new THREE.MeshNormalMaterial() )
-scene.add( cube );
-
-var lastTime = performance.now();
-
-function getMean( a ) {
-
-    //return a.reduce( ( a,b ) => a + b, 0 ) / a.length;
-    return a.reduce( function( a,b ) { return a + b }, 0 ) / a.length;
-
-}
-
-function getMedian( values ) {
-
-	values.sort( function(a,b) {return a - b;} );
-
-    var half = Math.floor(values.length/2);
-
-    if(values.length % 2)
-        return values[half];
-    else
-        return (values[half-1] + values[half]) / 2.0;
-
-}
-
-var meanLength = 100
-var etValues = new Array( meanLength );
-var etPtr = 0;
-
-function render( timestamp ) {
-
-	requestAnimationFrame( render );
-
-	controls.update();
-
-	var t = performance.now();
-	var et = t - lastTime
-	etValues[ etPtr++ %  meanLength  ] = et;
-
-	et = getMedian( etValues );
-	setText( 'Performance: ' + et.toFixed( 2 ) + 'ms / ' + ( 1000 / et ).toFixed( 2 ) + 'FPS' );
-
-	renderer.render(scene, camera );
-
-	lastTime = t;
-}
-
-function onWindowResize() {
-
-	renderer.setSize( window.innerWidth, window.innerHeight );
-	camera.aspect = window.innerWidth / window.innerHeight;
-	camera.updateProjectionMatrix();
-	renderer.setSize(window.innerWidth, window.innerHeight);
-
-}
-
-window.addEventListener( 'resize', onWindowResize );
-
-render();
-
-
-window.addEventListener('vrdisplaypresentchange', onWindowResize, true);
-
-function setText( string ) {
-
-	var chars = convertString( string );
-	material.uniforms.string.value = chars;
-	material.uniforms.widths.value = getWidths( chars );
-	material.uniforms.lefts.value = getLefts( chars );
-
-}
+	render();
 
 }
 
