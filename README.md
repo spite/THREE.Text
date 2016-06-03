@@ -1,2 +1,2 @@
-# THREE.TextMesh
-THREE.TextMesh for three.js
+# THREE.Text
+THREE.Text for three.js
