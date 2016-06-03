@@ -79,10 +79,12 @@ THREE.FontAtlas = function( settings, onReady ) {
 	    this.fileref.setAttribute( 'href', this.settings.src );
 	    document.getElementsByTagName( 'head' )[0].appendChild( this.fileref )
 	}
-    /*var div = document.createElement( 'div' );
+    
+    // hack for Safari
+    var div = document.createElement( 'div' );
     div.style.fontFamily = this.fontName;
     div.textContent = this.testStr;
-    document.body.appendChild( div )*/
+    document.body.appendChild( div )
 
     this.wait = 0;
 	setTimeout( this.waitForFont.bind( this ), 50 );
