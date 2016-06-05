@@ -145,14 +145,16 @@ document.body.appendChild( renderer.domElement );
 var atlasRobotoCondensed = new THREE.FontAtlas( { 
 	renderer: renderer, 
 	fontName: 'Shadows Into Light', 
-	src: 'https://fonts.googleapis.com/css?family=Shadows+Into+Light'  
+	woffSrc: 'url(https://fonts.gstatic.com/s/shadowsintolight/v6/clhLqOv7MXn459PTh0gXYMdQSYiIg2Yb25Hg13-ek1M.woff)',
+	woff2Src: 'url(https://fonts.gstatic.com/s/shadowsintolight/v6/clhLqOv7MXn459PTh0gXYKkG_nMAIv3PPZbC2XDns-o.woff2)'  
 }, check );
 
 var atlasRobotoSlab = new THREE.FontAtlas( { 
 	renderer: renderer, 
 	fontName: 'Permanent Marker',
 	size: 140,
-	src: 'https://fonts.googleapis.com/css?family=Permanent+Marker' 
+	woffSrc: 'url(https://fonts.gstatic.com/s/permanentmarker/v5/9vYsg5VgPHKK8SXYbf3sMupm9E4gBdgiUiSJePew_SQ.woff)',
+	woff2Src: 'url(https://fonts.gstatic.com/s/permanentmarker/v5/9vYsg5VgPHKK8SXYbf3sMio-5Z6V1O0VBgfXWFfbB4c.woff2)' 
 }, check );
 
 function createLabels() {
