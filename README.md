@@ -21,11 +21,17 @@ The library has been rewritten for current three.js. What changed from the 2016 
 - labels can have a color, and there's a ```dispose()``` for labels and atlases
 
 #### How to use ####
-Import three.js and the module in your project:
+Use npm to install it, alongside three.js
+```
+npm i three three.text-atlas
+```
+and import it in your code
 ```js
 import * as THREE from 'three';
-import { FontAtlas, Text, SCALE } from './src/THREE.Text.js';
+import { FontAtlas, Text, SCALE } from 'three.text-atlas';
 ```
+It's a plain ES module, so it also works without a bundler as long as an import map resolves `three` (see [examples/index.html](examples/index.html)).
+
 Create an atlas for a font. It draws the glyphs into a texture once the font has loaded:
 ```js
 const atlas = new FontAtlas( {
@@ -60,3 +66,9 @@ To release them:
 text.dispose();
 atlas.dispose();
 ```
+
+#### License ####
+
+MIT licensed
+
+Copyright (C) 2016 Jaume Sanchez Elias, http://www.clicktorelease.com

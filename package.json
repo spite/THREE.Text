@@ -1,0 +1,35 @@
+{
+  "name": "three.text-atlas",
+  "version": "1.0.0",
+  "description": "Text labels for three.js, drawn from a texture atlas of the font made in the browser",
+  "type": "module",
+  "main": "src/THREE.Text.js",
+  "exports": "./src/THREE.Text.js",
+  "files": [
+    "src"
+  ],
+  "directories": {
+    "example": "examples"
+  },
+  "peerDependencies": {
+    "three": ">=0.155.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spite/THREE.Text.git"
+  },
+  "keywords": [
+    "three.js",
+    "text",
+    "label",
+    "font",
+    "atlas",
+    "webgl"
+  ],
+  "author": "Jaume Sanchez <the.spite@gmail.com> (https://www.clicktorelease.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/spite/THREE.Text/issues"
+  },
+  "homepage": "https://github.com/spite/THREE.Text#readme"
+}
