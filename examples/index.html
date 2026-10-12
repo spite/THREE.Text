@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>THREE.Text</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				margin: 0;
+				overflow: hidden;
+				background-color: #000000;
+				color: #ffffff;
+				font-family: sans-serif;
+				font-size: 13px;
+				line-height: 1.4em;
+			}
+			#info {
+				position: absolute;
+				left: 12px;
+				top: 12px;
+				max-width: 420px;
+			}
+			#info b {
+				font-size: 20px;
+				line-height: 1.6em;
+			}
+			#atlases {
+				position: absolute;
+				left: 12px;
+				bottom: 12px;
+				display: flex;
+				gap: 12px;
+			}
+			#atlases canvas {
+				display: block;
+				height: 160px;
+				border: 1px solid #404040;
+				background-color: rgba( 0, 0, 0, .8 );
+			}
+		</style>
+	</head>
+	<body>
+
+		<div id="info"><b>THREE.Text</b><br>Each font is drawn once into a texture, shown below, and every label is a strip of quads that picks its glyphs from it. There are 1000 labels here, and the two lines in the middle change on every frame.</div>
+		<div id="atlases"></div>
+
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+					"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+				}
+			}
+		</script>
+
+		<script type="module">
+
+			import * as THREE from 'three';
+			import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+			import { FontAtlas, Text, SCALE } from '../src/THREE.Text.js';
+
+			let renderer, scene, camera, controls;
+
+			renderer = new THREE.WebGLRenderer( { antialias: true } );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			document.body.appendChild( renderer.domElement );
+
+			const atlasShadows = new FontAtlas( {
+				renderer: renderer,
+				fontName: 'Shadows Into Light',
+				woffSrc: 'url(https://fonts.gstatic.com/s/shadowsintolight/v6/clhLqOv7MXn459PTh0gXYMdQSYiIg2Yb25Hg13-ek1M.woff)'
+			} );
+
+			const atlasMarker = new FontAtlas( {
+				renderer: renderer,
+				fontName: 'Permanent Marker',
+				size: 140,
+				woffSrc: 'url(https://fonts.gstatic.com/s/permanentmarker/v5/9vYsg5VgPHKK8SXYbf3sMupm9E4gBdgiUiSJePew_SQ.woff)'
+			} );
+
+			Promise.all( [ atlasShadows.onReady, atlasMarker.onReady ] ).then( init );
+
+			function createLabels() {
+
+				const p = new THREE.Vector3();
+
+				for ( let j = 0; j < 1000; j ++ ) {
+
+					const r = 2 + Math.random() * 5;
+					const x = .5 - Math.random();
+					const y = .5 - Math.random();
+					const z = .5 - Math.random();
+					const theta = Math.atan2( Math.sqrt( x * x + y * y ), z );
+					const phi = Math.atan2( y, x );
+					p.set( r * Math.sin( theta ) * Math.cos( phi ), r * Math.sin( theta ) * Math.sin( phi ), r * Math.cos( theta ) );
+
+					const label = new Text( atlasShadows );
+					label.mesh.position.copy( p );
+					let n = Math.random() * 300;
+					if ( Math.random() > .5 ) n = Math.round( n ); else n = n.toFixed( Math.random() * 4 );
+					label.set( n );
+					label.mesh.position.x -= SCALE * .5 * label.width;
+					label.mesh.lookAt( scene.position );
+					scene.add( label.mesh );
+
+				}
+
+			}
+
+			function init() {
+
+				document.getElementById( 'atlases' ).append( atlasShadows.canvas, atlasMarker.canvas );
+
+				scene = new THREE.Scene();
+
+				createLabels();
+
+				renderer.setClearColor( 0, 1 );
+
+				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, .1, 100 );
+				camera.position.z = 2;
+
+				controls = new OrbitControls( camera, renderer.domElement );
+
+				const text = new Text( atlasShadows );
+				text.mesh.position.y += .2;
+				scene.add( text.mesh );
+				const text2 = new Text( atlasMarker );
+				text2.mesh.position.y += .075;
+				scene.add( text2.mesh );
+
+				const cube = new THREE.Mesh( new THREE.BoxGeometry( .1, .1, .1 ), new THREE.MeshNormalMaterial() );
+				scene.add( cube );
+
+				function render( timestamp ) {
+
+					requestAnimationFrame( render );
+
+					scene.rotation.y = .001 * timestamp;
+					scene.rotation.z = .0001 * timestamp;
+
+					controls.update();
+					text.set( 'Performance.now():' );
+					text2.set( performance.now().toFixed( 2 ) );
+
+					text.mesh.position.x = SCALE * ( - .5 * text.width );
+					text2.mesh.position.x = SCALE * ( - .5 * text2.width );
+
+					renderer.render( scene, camera );
+
+				}
+
+				function onWindowResize() {
+
+					renderer.setSize( window.innerWidth, window.innerHeight );
+					camera.aspect = window.innerWidth / window.innerHeight;
+					camera.updateProjectionMatrix();
+
+				}
+
+				window.addEventListener( 'resize', onWindowResize );
+
+				render( 0 );
+
+			}
+
+		</script>
+
+	</body>
+</html>
