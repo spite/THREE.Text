@@ -1,6 +1,8 @@
 # THREE.Text
 THREE.Text for three.js: text labels drawn from a texture atlas of the font, made in the browser
 
+[![npm](https://img.shields.io/npm/v/three.text-atlas.svg)](https://www.npmjs.com/package/three.text-atlas)
+
 #### Demo ####
 - **[1000 labels and two lines that change on every frame](https://spite.github.io/THREE.Text/examples/)**: the atlas of each font is shown next to the scene
 
